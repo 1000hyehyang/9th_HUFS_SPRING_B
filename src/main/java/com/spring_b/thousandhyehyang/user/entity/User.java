@@ -4,7 +4,7 @@ import com.spring_b.thousandhyehyang.global.entity.BaseEntity;
 import com.spring_b.thousandhyehyang.global.enums.UserRole;
 import com.spring_b.thousandhyehyang.user.enums.Gender;
 import com.spring_b.thousandhyehyang.mission.entity.UserMission;
-import com.spring_b.thousandhyehyang.mission.entity.PointTransaction;
+import com.spring_b.thousandhyehyang.point.entity.PointTransaction;
 import com.spring_b.thousandhyehyang.review.entity.Review;
 import com.spring_b.thousandhyehyang.review.entity.ReviewReply;
 import com.spring_b.thousandhyehyang.inquiry.entity.Inquiry;
@@ -15,7 +15,9 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "users",
@@ -115,7 +117,8 @@ public class User extends BaseEntity {
     private List<UserMission> userMissions = new ArrayList<>();
 
     // N:M 관계 - UserFoodPreference (선호도는 삭제해도 됨)
+    // Set 사용: equals/hashCode로 중복 방지 (같은 foodCategory 중복 불가)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
-    private List<UserFoodPreference> foodPreferences = new ArrayList<>();
+    private Set<UserFoodPreference> foodPreferences = new HashSet<>();
 }

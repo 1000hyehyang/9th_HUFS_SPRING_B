@@ -1,6 +1,7 @@
 package com.spring_b.thousandhyehyang.mission.entity;
 
 import com.spring_b.thousandhyehyang.global.entity.BaseEntity;
+import com.spring_b.thousandhyehyang.point.entity.PointTransaction;
 import com.spring_b.thousandhyehyang.store.entity.Store;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,12 +38,12 @@ public class Mission extends BaseEntity {
     private Integer rewardPoint;
 
     // 1:N 관계 - UserMission
-    @OneToMany(mappedBy = "mission", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "mission", fetch = FetchType.LAZY)
     @Builder.Default
     private List<UserMission> userMissions = new ArrayList<>();
 
     // 1:N 관계 - PointTransaction
-    @OneToMany(mappedBy = "mission", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "mission", fetch = FetchType.LAZY)
     @Builder.Default
     private List<PointTransaction> pointTransactions = new ArrayList<>();
 }

@@ -1,7 +1,8 @@
-package com.spring_b.thousandhyehyang.mission.entity;
+package com.spring_b.thousandhyehyang.point.entity;
 
 import com.spring_b.thousandhyehyang.global.entity.BaseEntity;
-import com.spring_b.thousandhyehyang.mission.enums.PointType;
+import com.spring_b.thousandhyehyang.mission.entity.Mission;
+import com.spring_b.thousandhyehyang.point.enums.PointType;
 import com.spring_b.thousandhyehyang.user.entity.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
@@ -62,3 +63,4 @@ public class PointTransaction extends BaseEntity {
     @Column(length = 255)
     private String description;
 }
+
