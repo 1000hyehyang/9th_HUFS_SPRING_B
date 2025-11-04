@@ -1,8 +1,12 @@
 package com.spring_b.thousandhyehyang.review.repository;
 
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.spring_b.thousandhyehyang.review.entity.QReview;
+import com.spring_b.thousandhyehyang.review.entity.QReviewImage;
+import com.spring_b.thousandhyehyang.review.entity.QReviewReply;
 import com.spring_b.thousandhyehyang.review.entity.Review;
 import com.spring_b.thousandhyehyang.store.entity.QStore;
 import com.spring_b.thousandhyehyang.user.entity.QUser;
@@ -10,8 +14,10 @@ import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Repository
@@ -24,10 +30,14 @@ public class ReviewRepositoryImpl implements ReviewRepositoryCustom {
     }
 
     @Override
-    public Page<Review> findMyReviews(Long userId, String storeName, Integer ratingRange, Pageable pageable) {                                                  
+    public Page<Review> findMyReviews(Long userId, String storeName, Integer ratingRange, Pageable pageable) {
         QReview review = QReview.review;
         QStore store = QStore.store;
-        QUser user = QUser.user;
+        QUser user = QUser.user; // 리뷰 작성자용
+        QUser replyUser = new QUser("replyUser"); // 답글 작성자용
+        QReviewReply reviewReply = QReviewReply.reviewReply;
+        QReviewReply parentReply = new QReviewReply("parentReply"); // 대댓글의 부모용 별칭
+        QReviewImage reviewImage = QReviewImage.reviewImage;
 
         BooleanBuilder builder = new BooleanBuilder();
 
@@ -37,7 +47,7 @@ public class ReviewRepositoryImpl implements ReviewRepositoryCustom {
 
         // 가게명 필터링 (부분 일치)
         if (storeName != null && !storeName.trim().isEmpty()) {
-            builder.and(store.name.containsIgnoreCase(storeName.trim()));       
+            builder.and(store.name.containsIgnoreCase(storeName.trim()));
         }
 
         // 별점 필터링
@@ -46,25 +56,20 @@ public class ReviewRepositoryImpl implements ReviewRepositoryCustom {
                    .and(review.rating.lt(ratingRange + 1.0));
         }
 
-        // 페이징 적용하여 조회
-        var query = queryFactory
+        JPAQuery<Review> query = queryFactory
                 .selectFrom(review)
                 .innerJoin(review.store, store).fetchJoin()
                 .innerJoin(review.user, user).fetchJoin()
-                .where(builder);
+                .leftJoin(review.reviewImages, reviewImage).fetchJoin()
+                .leftJoin(review.reviewReplies, reviewReply).fetchJoin()
+                .leftJoin(reviewReply.user, replyUser).fetchJoin()
+                .leftJoin(reviewReply.parent, parentReply).fetchJoin()
+                .where(builder)
+                .distinct(); // fetchJoin으로 인한 중복 제거
 
-        // Pageable의 Sort 정보를 사용하여 정렬 적용
-        if (pageable.getSort().isSorted()) {
-            pageable.getSort().forEach(order -> {
-                var property = order.getProperty();
-                if ("createdAt".equals(property)) {
-                    query.orderBy(order.isAscending() ?
-                        review.createdAt.asc() : review.createdAt.desc());      
-                } else if ("rating".equals(property)) {
-                    query.orderBy(order.isAscending() ?
-                        review.rating.asc() : review.rating.desc());
-                }
-            });
+        List<OrderSpecifier<?>> orderSpecifiers = convertToQueryDslOrder(pageable.getSort(), review);
+        if (!orderSpecifiers.isEmpty()) {
+            query.orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]));
         } else {
             // 기본 정렬: 최신순
             query.orderBy(review.createdAt.desc());
@@ -77,7 +82,7 @@ public class ReviewRepositoryImpl implements ReviewRepositoryCustom {
 
         // 전체 개수 조회
         Long totalCount = queryFactory
-                .select(review.count())
+                .select(review.countDistinct())
                 .from(review)
                 .where(builder)
                 .fetchOne();
@@ -85,5 +90,50 @@ public class ReviewRepositoryImpl implements ReviewRepositoryCustom {
         long total = totalCount != null ? totalCount : 0L;
 
         return new PageImpl<>(reviews, pageable, total);
+    }
+
+    /**
+     * 받은 Sort 객체를 QueryDSL로 변환
+     *
+     * @param sort Spring Data Sort 객체
+     * @param review QReview 객체
+     * @return QueryDSL OrderSpecifier 리스트
+     */
+    private List<OrderSpecifier<?>> convertToQueryDslOrder(Sort sort, QReview review) {
+        List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
+
+        if (sort == null || !sort.isSorted()) {
+            return orderSpecifiers;
+        }
+
+        // 여러 정렬 조건을 모두 처리
+        for (Sort.Order order : sort) {
+            String property = order.getProperty();
+            com.querydsl.core.types.Order direction = order.isAscending()
+                    ? com.querydsl.core.types.Order.ASC
+                    : com.querydsl.core.types.Order.DESC;
+
+            OrderSpecifier<?> orderSpecifier = null;
+            switch (property) {
+                case "createdAt":
+                    orderSpecifier = new OrderSpecifier<>(direction, review.createdAt);
+                    break;
+                case "rating":
+                    orderSpecifier = new OrderSpecifier<>(direction, review.rating);
+                    break;
+                case "updatedAt":
+                    orderSpecifier = new OrderSpecifier<>(direction, review.updatedAt);
+                    break;
+                default:
+                    // Service에서 이미 검증했지만, 안전장치로 처리
+                    break;
+            }
+
+            if (orderSpecifier != null) {
+                orderSpecifiers.add(orderSpecifier);
+            }
+        }
+
+        return orderSpecifiers;
     }
 }
