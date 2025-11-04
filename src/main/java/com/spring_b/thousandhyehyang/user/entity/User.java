@@ -4,7 +4,7 @@ import com.spring_b.thousandhyehyang.global.entity.BaseEntity;
 import com.spring_b.thousandhyehyang.global.enums.UserRole;
 import com.spring_b.thousandhyehyang.user.enums.Gender;
 import com.spring_b.thousandhyehyang.mission.entity.UserMission;
-import com.spring_b.thousandhyehyang.mission.entity.PointTransaction;
+import com.spring_b.thousandhyehyang.point.entity.PointTransaction;
 import com.spring_b.thousandhyehyang.review.entity.Review;
 import com.spring_b.thousandhyehyang.review.entity.ReviewReply;
 import com.spring_b.thousandhyehyang.inquiry.entity.Inquiry;
