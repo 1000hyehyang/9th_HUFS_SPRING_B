@@ -12,11 +12,17 @@ import com.spring_b.thousandhyehyang.user.entity.User;
 import com.spring_b.thousandhyehyang.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 리뷰 Service
@@ -40,8 +46,6 @@ public class ReviewService {
      */
     @Transactional
     public ReviewResponse createReview(Long userId, ReviewCreateRequest request) {
-        log.info("리뷰 작성 요청 - userId: {}, storeId: {}", userId, request.getStoreId());
-
         // 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
@@ -82,9 +86,38 @@ public class ReviewService {
 
         storeService.updateAverageRating(store.getStoreId());
 
-        log.info("리뷰 작성 완료 - reviewId: {}", savedReview.getReviewId());
-
         return ReviewResponse.from(savedReview);
+    }
+
+    /**
+     * 내가 작성한 리뷰 조회 (QueryDSL 사용)
+     * 
+     * @param userId
+     * @param storeName
+     * @param ratingRange
+     * @param page
+     * @param size
+     * @return Page<ReviewResponse>
+     */
+        @Transactional(readOnly = true)
+    public Page<ReviewResponse> getMyReviews(Long userId, String storeName, Integer ratingRange, int page, int size) {                                          
+        
+        // 입력값 검증
+        if (ratingRange != null && (ratingRange < 0 || ratingRange > 5)) {
+            throw new IllegalArgumentException("별점 범위는 0~5 사이여야 합니다: " + ratingRange);
+        }
+
+        // 페이징 설정 (최신순)
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));                                                              
+
+        Page<Review> reviewPage = reviewRepository.findMyReviews(userId, storeName, ratingRange, pageable);
+
+        // Entity를 DTO로 변환
+        List<ReviewResponse> reviewResponses = reviewPage.getContent().stream()
+                .map(ReviewResponse::from)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(reviewResponses, pageable, reviewPage.getTotalElements());
     }
 }
 
