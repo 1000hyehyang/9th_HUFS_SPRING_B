@@ -19,8 +19,6 @@ public class ReviewSearchRequest {
     @Max(value = 5, message = "별점 범위는 5 이하여야 합니다")
     private Integer ratingRange;
 
-    private Long userId;
-
     @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다")
     @Builder.Default
     private Integer page = 0;

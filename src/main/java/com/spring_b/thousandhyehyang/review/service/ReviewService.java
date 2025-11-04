@@ -2,6 +2,7 @@ package com.spring_b.thousandhyehyang.review.service;
 
 import com.spring_b.thousandhyehyang.review.dto.ReviewCreateRequest;
 import com.spring_b.thousandhyehyang.review.dto.ReviewResponse;
+import com.spring_b.thousandhyehyang.review.dto.ReviewSearchRequest;
 import com.spring_b.thousandhyehyang.review.entity.Review;
 import com.spring_b.thousandhyehyang.review.entity.ReviewImage;
 import com.spring_b.thousandhyehyang.review.repository.ReviewRepository;
@@ -93,24 +94,26 @@ public class ReviewService {
      * 내가 작성한 리뷰 조회 (QueryDSL 사용)
      * 
      * @param userId
-     * @param storeName
-     * @param ratingRange
-     * @param page
-     * @param size
+     * @param request
      * @return Page<ReviewResponse>
      */
-        @Transactional(readOnly = true)
-    public Page<ReviewResponse> getMyReviews(Long userId, String storeName, Integer ratingRange, int page, int size) {                                          
-        
-        // 입력값 검증
-        if (ratingRange != null && (ratingRange < 0 || ratingRange > 5)) {
-            throw new IllegalArgumentException("별점 범위는 0~5 사이여야 합니다: " + ratingRange);
-        }
+    @Transactional(readOnly = true)
+    public Page<ReviewResponse> getMyReviews(Long userId, ReviewSearchRequest request) {
+        log.info("내가 작성한 리뷰 조회 요청 - userId: {}, request: {}", userId, request);
 
-        // 페이징 설정 (최신순)
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));                                                              
 
-        Page<Review> reviewPage = reviewRepository.findMyReviews(userId, storeName, ratingRange, pageable);
+        // 정렬 설정
+        Sort sort = createSort(request.getSortBy(), request.getSortDirection());
+
+        // 페이징 설정
+        Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), sort);
+
+        Page<Review> reviewPage = reviewRepository.findMyReviews(
+                userId,
+                request.getStoreName(),
+                request.getRatingRange(),
+                pageable
+        );
 
         // Entity를 DTO로 변환
         List<ReviewResponse> reviewResponses = reviewPage.getContent().stream()
@@ -118,6 +121,47 @@ public class ReviewService {
                 .collect(Collectors.toList());
 
         return new PageImpl<>(reviewResponses, pageable, reviewPage.getTotalElements());
+    }
+
+    /**
+     * 정렬 설정 생성
+     * 
+     * @param sortBy 정렬 기준 (createdAt, rating, updatedAt)
+     * @param sortDirection 정렬 방향 (ASC, DESC)
+     * @return Sort 객체
+     */
+    private Sort createSort(String sortBy, String sortDirection) {
+        // 기본값: 최신순 (createdAt DESC)
+        if (sortBy == null || sortBy.trim().isEmpty()) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+
+        // 정렬 방향 설정
+        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDirection)
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+
+        // 정렬 기준 검증 및 설정
+        String property;
+        switch (sortBy.toLowerCase()) {
+            case "createdat":
+            case "created_at":
+                property = "createdAt";
+                break;
+            case "rating":
+                property = "rating";
+                break;
+            case "updatedat":
+            case "updated_at":
+                property = "updatedAt";
+                break;
+            default:
+                // 기본값: createdAt
+                property = "createdAt";
+                break;
+        }
+
+        return Sort.by(direction, property);
     }
 }
 
