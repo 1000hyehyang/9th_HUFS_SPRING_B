@@ -1,9 +1,12 @@
 package com.spring_b.thousandhyehyang.store.service;
 
 import com.spring_b.thousandhyehyang.review.repository.ReviewRepository;
+import com.spring_b.thousandhyehyang.store.converter.StoreConverter;
 import com.spring_b.thousandhyehyang.store.dto.StoreResponse;
 import com.spring_b.thousandhyehyang.store.dto.StoreSearchRequest;
 import com.spring_b.thousandhyehyang.store.entity.Store;
+import com.spring_b.thousandhyehyang.store.exception.StoreErrorCode;
+import com.spring_b.thousandhyehyang.store.exception.StoreException;
 import com.spring_b.thousandhyehyang.store.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +42,7 @@ public class StoreService {
         
         if (averageRating != null) {
             Store store = storeRepository.findById(storeId)
-                    .orElseThrow(() -> new IllegalArgumentException("가게를 찾을 수 없습니다: " + storeId));
+                    .orElseThrow(() -> new StoreException(StoreErrorCode.STORE_NOT_FOUND));
             store.setAvgRating(averageRating);
             storeRepository.save(store);
             
@@ -72,7 +75,7 @@ public class StoreService {
 
         // Entity를 DTO로 변환
         List<StoreResponse> storeResponses = storePage.getContent().stream()
-                .map(StoreResponse::from)
+                .map(StoreConverter::toResponse)
                 .collect(Collectors.toList());
 
         return new PageImpl<>(storeResponses, pageable, storePage.getTotalElements());

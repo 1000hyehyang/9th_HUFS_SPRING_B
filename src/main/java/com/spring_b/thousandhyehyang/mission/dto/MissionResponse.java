@@ -1,6 +1,5 @@
 package com.spring_b.thousandhyehyang.mission.dto;
 
-import com.spring_b.thousandhyehyang.mission.entity.Mission;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,25 +26,5 @@ public class MissionResponse {
     private String storeAddress;
     private String storeSido;
     private String storeSigungu;
-
-    public static MissionResponse from(Mission mission) {
-        if (mission == null) {
-            return null;
-        }
-
-        return MissionResponse.builder()
-                .missionId(mission.getMissionId())
-                .title(mission.getTitle())
-                .description(mission.getDescription())
-                .rewardPoint(mission.getRewardPoint())
-                .createdAt(mission.getCreatedAt())
-                .updatedAt(mission.getUpdatedAt())
-                .storeId(mission.getStore().getStoreId())
-                .storeName(mission.getStore().getName())
-                .storeAddress(mission.getStore().getAddress())
-                .storeSido(mission.getStore().getSido())
-                .storeSigungu(mission.getStore().getSigungu())
-                .build();
-    }
 }
 

@@ -1,5 +1,6 @@
 package com.spring_b.thousandhyehyang.mission.service;
 
+import com.spring_b.thousandhyehyang.mission.converter.MissionConverter;
 import com.spring_b.thousandhyehyang.mission.dto.MissionPageResponse;
 import com.spring_b.thousandhyehyang.mission.dto.MissionResponse;
 import com.spring_b.thousandhyehyang.mission.dto.MissionSearchRequest;
@@ -53,7 +54,7 @@ public class MissionService {
         );
 
         List<MissionResponse> missionResponses = missionPage.getContent().stream()
-                .map(MissionResponse::from)
+                .map(MissionConverter::toMissionResponse)
                 .toList();
 
         return MissionPageResponse.builder()
@@ -106,7 +107,7 @@ public class MissionService {
                 userId, statuses, pageable);
 
         List<UserMissionResponse> responses = userMissionPage.getContent().stream()
-                .map(UserMissionResponse::from)
+                .map(MissionConverter::toUserMissionResponse)
                 .toList();
 
         return UserMissionPageResponse.builder()
@@ -141,7 +142,7 @@ public class MissionService {
 
         // DTO 변환
         List<UserMissionResponse> responses = userMissionPage.getContent().stream()
-                .map(UserMissionResponse::from)
+                .map(MissionConverter::toUserMissionResponse)
                 .toList();
 
         return UserMissionPageResponse.builder()

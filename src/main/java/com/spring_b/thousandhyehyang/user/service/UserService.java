@@ -1,8 +1,11 @@
 package com.spring_b.thousandhyehyang.user.service;
 
 import com.spring_b.thousandhyehyang.point.repository.PointTransactionRepository;
+import com.spring_b.thousandhyehyang.user.converter.UserConverter;
 import com.spring_b.thousandhyehyang.user.dto.UserMyPageResponse;
 import com.spring_b.thousandhyehyang.user.entity.User;
+import com.spring_b.thousandhyehyang.user.exception.UserErrorCode;
+import com.spring_b.thousandhyehyang.user.exception.UserException;
 import com.spring_b.thousandhyehyang.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,18 +31,11 @@ public class UserService {
         log.info("마이페이지 정보 조회 요청 - userId: {}", userId);
 
         User user = userRepository.findUserForMyPage(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
 
         Integer currentPoints = pointTransactionRepository.findCurrentBalanceByUserId(userId);
 
-        return UserMyPageResponse.builder()
-                .userId(user.getUserId())
-                .nickname(user.getNickname())
-                .email(user.getEmail())
-                .phoneNumber(user.getPhoneNumber())
-                .phoneVerified(user.isPhoneVerified())
-                .currentPoints(currentPoints)
-                .build();
+        return UserConverter.toMyPageResponse(user, currentPoints);
     }
 }
 

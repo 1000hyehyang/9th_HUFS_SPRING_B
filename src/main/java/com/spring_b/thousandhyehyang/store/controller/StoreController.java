@@ -1,5 +1,7 @@
 package com.spring_b.thousandhyehyang.store.controller;
 
+import com.spring_b.thousandhyehyang.global.apiPayload.ApiResponse;
+import com.spring_b.thousandhyehyang.global.apiPayload.code.GeneralSuccessCode;
 import com.spring_b.thousandhyehyang.store.dto.StoreResponse;
 import com.spring_b.thousandhyehyang.store.dto.StoreSearchRequest;
 import com.spring_b.thousandhyehyang.store.service.StoreService;
@@ -41,11 +43,13 @@ public class StoreController {
      * @return Page<StoreResponse>
      */
     @GetMapping("/search")
-    public ResponseEntity<Page<StoreResponse>> searchStores(
+    public ResponseEntity<ApiResponse<Page<StoreResponse>>> searchStores(
             @Valid @ModelAttribute StoreSearchRequest request) {
 
         Page<StoreResponse> stores = storeService.searchStores(request);
 
-        return ResponseEntity.ok(stores);
+        return ResponseEntity
+                .status(GeneralSuccessCode.OK.getStatus())
+                .body(ApiResponse.onSuccess(GeneralSuccessCode.OK, stores));
     }
 }

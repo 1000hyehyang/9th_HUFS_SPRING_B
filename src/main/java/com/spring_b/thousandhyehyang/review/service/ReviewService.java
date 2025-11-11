@@ -1,16 +1,23 @@
 package com.spring_b.thousandhyehyang.review.service;
 
+import com.spring_b.thousandhyehyang.review.converter.ReviewConverter;
 import com.spring_b.thousandhyehyang.review.dto.ReviewCreateRequest;
 import com.spring_b.thousandhyehyang.review.dto.ReviewResponse;
 import com.spring_b.thousandhyehyang.review.dto.ReviewSearchRequest;
 import com.spring_b.thousandhyehyang.review.entity.Review;
 import com.spring_b.thousandhyehyang.review.entity.ReviewImage;
+import com.spring_b.thousandhyehyang.review.exception.ReviewErrorCode;
+import com.spring_b.thousandhyehyang.review.exception.ReviewException;
 import com.spring_b.thousandhyehyang.review.repository.ReviewRepository;
 import com.spring_b.thousandhyehyang.store.entity.Store;
 import com.spring_b.thousandhyehyang.store.repository.StoreRepository;
 import com.spring_b.thousandhyehyang.store.service.StoreService;
 import com.spring_b.thousandhyehyang.user.entity.User;
 import com.spring_b.thousandhyehyang.user.repository.UserRepository;
+import com.spring_b.thousandhyehyang.store.exception.StoreErrorCode;
+import com.spring_b.thousandhyehyang.store.exception.StoreException;
+import com.spring_b.thousandhyehyang.user.exception.UserErrorCode;
+import com.spring_b.thousandhyehyang.user.exception.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -49,16 +56,16 @@ public class ReviewService {
     public ReviewResponse createReview(Long userId, ReviewCreateRequest request) {
         // 사용자 조회
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
 
         // 가게 조회
         Store store = storeRepository.findById(request.getStoreId())
-                .orElseThrow(() -> new IllegalArgumentException("가게를 찾을 수 없습니다: " + request.getStoreId()));
+                .orElseThrow(() -> new StoreException(StoreErrorCode.STORE_NOT_FOUND));
 
         // 중복 리뷰 체크
         Review existingReview = reviewRepository.findByUserIdAndStoreId(userId, request.getStoreId());
         if (existingReview != null) {
-            throw new IllegalStateException("이미 해당 가게에 리뷰를 작성하셨습니다.");
+            throw new ReviewException(ReviewErrorCode.REVIEW_ALREADY_EXISTS);
         }
 
         // 리뷰 생성
@@ -87,7 +94,7 @@ public class ReviewService {
 
         storeService.updateAverageRating(store.getStoreId());
 
-        return ReviewResponse.from(savedReview);
+        return ReviewConverter.toResponse(savedReview);
     }
 
     /**
@@ -117,7 +124,7 @@ public class ReviewService {
 
         // Entity를 DTO로 변환
         List<ReviewResponse> reviewResponses = reviewPage.getContent().stream()
-                .map(ReviewResponse::from)
+                .map(ReviewConverter::toResponse)
                 .collect(Collectors.toList());
 
         return new PageImpl<>(reviewResponses, pageable, reviewPage.getTotalElements());
