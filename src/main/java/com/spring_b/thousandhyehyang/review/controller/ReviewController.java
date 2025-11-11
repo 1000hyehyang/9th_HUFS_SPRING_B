@@ -1,5 +1,7 @@
 package com.spring_b.thousandhyehyang.review.controller;
 
+import com.spring_b.thousandhyehyang.global.apiPayload.ApiResponse;
+import com.spring_b.thousandhyehyang.global.apiPayload.code.GeneralSuccessCode;
 import com.spring_b.thousandhyehyang.review.dto.ReviewResponse;
 import com.spring_b.thousandhyehyang.review.dto.ReviewSearchRequest;
 import com.spring_b.thousandhyehyang.review.service.ReviewService;
@@ -8,7 +10,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
@@ -29,13 +35,15 @@ public class ReviewController {
      * @return Page<ReviewResponse>
      */
     @GetMapping("/my/{userId}")
-    public ResponseEntity<Page<ReviewResponse>> getMyReviews(
+    public ResponseEntity<ApiResponse<Page<ReviewResponse>>> getMyReviews(
             @PathVariable Long userId,
             @Valid @ModelAttribute ReviewSearchRequest request) {
 
         Page<ReviewResponse> reviews = reviewService.getMyReviews(userId, request);
 
-        return ResponseEntity.ok(reviews);
+        return ResponseEntity
+                .status(GeneralSuccessCode.OK.getStatus())
+                .body(ApiResponse.onSuccess(GeneralSuccessCode.OK, reviews));
     }
 }
 
