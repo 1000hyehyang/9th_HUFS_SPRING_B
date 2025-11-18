@@ -1,5 +1,6 @@
 package com.spring_b.thousandhyehyang.review.dto;
 
+import com.spring_b.thousandhyehyang.global.validation.ValidUrl;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,7 @@ public class ReviewCreateRequest {
     @Size(max = 2000, message = "리뷰 내용은 2000자 이하여야 합니다")
     private String content;
 
-    private List<String> imageUrls; // 리뷰 이미지 URL 목록
+    @Size(max = 10, message = "이미지는 최대 10개까지 첨부할 수 있습니다")
+    private List<@ValidUrl(message = "올바른 이미지 URL 형식이 아닙니다") String> imageUrls; // 리뷰 이미지 URL 목록
 }
 

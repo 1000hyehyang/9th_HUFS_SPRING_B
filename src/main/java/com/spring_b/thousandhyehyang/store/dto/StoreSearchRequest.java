@@ -2,6 +2,7 @@ package com.spring_b.thousandhyehyang.store.dto;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,7 @@ import java.util.List;
 @Builder
 public class StoreSearchRequest {
 
+    @Size(max = 10, message = "지역 필터는 최대 10개까지 선택할 수 있습니다")
     private List<String> regions;
 
     private String searchKeyword;

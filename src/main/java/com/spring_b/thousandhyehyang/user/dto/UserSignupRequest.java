@@ -1,5 +1,6 @@
 package com.spring_b.thousandhyehyang.user.dto;
 
+import com.spring_b.thousandhyehyang.global.validation.ValidAge;
 import com.spring_b.thousandhyehyang.user.enums.FoodCategory;
 import com.spring_b.thousandhyehyang.user.enums.Gender;
 import jakarta.validation.constraints.*;
@@ -29,6 +30,8 @@ public class UserSignupRequest {
     @NotNull(message = "성별은 필수입니다")
     private Gender gender;
 
+    @Past(message = "올바른 생년월일을 선택해주세요")
+    @ValidAge(message = "만 14세 이상 120세 이하만 가입 가능합니다")
     private LocalDate birthDate;
 
     @Size(max = 255, message = "주소는 255자 이하여야 합니다")
