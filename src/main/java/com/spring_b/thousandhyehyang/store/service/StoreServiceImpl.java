@@ -2,12 +2,19 @@ package com.spring_b.thousandhyehyang.store.service;
 
 import com.spring_b.thousandhyehyang.review.repository.ReviewRepository;
 import com.spring_b.thousandhyehyang.store.converter.StoreConverter;
+import com.spring_b.thousandhyehyang.store.dto.StoreCreateRequest;
 import com.spring_b.thousandhyehyang.store.dto.StoreResponse;
 import com.spring_b.thousandhyehyang.store.dto.StoreSearchRequest;
 import com.spring_b.thousandhyehyang.store.entity.Store;
+import com.spring_b.thousandhyehyang.store.entity.StoreImage;
 import com.spring_b.thousandhyehyang.store.exception.StoreErrorCode;
 import com.spring_b.thousandhyehyang.store.exception.StoreException;
 import com.spring_b.thousandhyehyang.store.repository.StoreRepository;
+import com.spring_b.thousandhyehyang.user.entity.OwnerProfile;
+import com.spring_b.thousandhyehyang.user.entity.User;
+import com.spring_b.thousandhyehyang.user.exception.UserErrorCode;
+import com.spring_b.thousandhyehyang.user.exception.UserException;
+import com.spring_b.thousandhyehyang.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,6 +36,7 @@ public class StoreServiceImpl implements StoreService {
 
     private final StoreRepository storeRepository;
     private final ReviewRepository reviewRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
@@ -45,6 +53,60 @@ public class StoreServiceImpl implements StoreService {
         } else {
             log.warn("가게 평균 평점이 null입니다 - storeId: {}", storeId);
         }
+    }
+
+    @Override
+    @Transactional
+    public StoreResponse createStore(Long ownerId, StoreCreateRequest request) {
+        // User 조회
+        User user = userRepository.findById(ownerId)
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+
+        // 권한 검증: OWNER 역할인지 확인
+        if (user.getRole() != com.spring_b.thousandhyehyang.global.enums.UserRole.OWNER) {
+            throw new StoreException(StoreErrorCode.OWNER_NOT_FOUND);
+        }
+
+        // OwnerProfile 조회
+        OwnerProfile ownerProfile = user.getOwnerProfile();
+        if (ownerProfile == null) {
+            throw new StoreException(StoreErrorCode.OWNER_PROFILE_NOT_FOUND);
+        }
+
+        // Store 엔티티 생성
+        Store store = Store.builder()
+                .owner(ownerProfile)
+                .name(request.getName().trim())
+                .category(request.getCategory())
+                .address(request.getAddress().trim())
+                .sido(request.getSido().trim())
+                .sigungu(request.getSigungu().trim())
+                .dong(request.getDong() != null ? request.getDong().trim() : null)
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .description(request.getDescription() != null ? request.getDescription().trim() : null)
+                .openTime(request.getOpenTime())
+                .closeTime(request.getCloseTime())
+                .contactPhone(request.getContactPhone() != null ? request.getContactPhone().trim() : null)
+                .contactEmail(request.getContactEmail() != null ? request.getContactEmail().trim() : null)
+                .build();
+
+        // StoreImage 설정 (stream 사용)
+        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            List<StoreImage> storeImages = request.getImageUrls().stream()
+                    .distinct() // 중복 제거
+                    .map(imageUrl -> StoreImage.builder()
+                            .store(store)
+                            .url(imageUrl)
+                            .build())
+                    .collect(Collectors.toList());
+            store.setStoreImages(storeImages);
+        }
+
+        // Store 저장 (cascade로 StoreImage도 함께 저장됨)
+        Store savedStore = storeRepository.save(store);
+
+        return StoreConverter.toResponse(savedStore);
     }
 
     @Override

@@ -1,16 +1,30 @@
 package com.spring_b.thousandhyehyang.mission.service;
 
 import com.spring_b.thousandhyehyang.mission.converter.MissionConverter;
+import com.spring_b.thousandhyehyang.mission.dto.MissionCreateRequest;
 import com.spring_b.thousandhyehyang.mission.dto.MissionPageResponse;
 import com.spring_b.thousandhyehyang.mission.dto.MissionResponse;
 import com.spring_b.thousandhyehyang.mission.dto.MissionSearchRequest;
+import com.spring_b.thousandhyehyang.mission.dto.UserMissionChallengeRequest;
 import com.spring_b.thousandhyehyang.mission.dto.UserMissionPageResponse;
 import com.spring_b.thousandhyehyang.mission.dto.UserMissionResponse;
 import com.spring_b.thousandhyehyang.mission.entity.Mission;
 import com.spring_b.thousandhyehyang.mission.entity.UserMission;
+import com.spring_b.thousandhyehyang.mission.entity.UserMissionId;
 import com.spring_b.thousandhyehyang.mission.enums.MissionStatus;
+import com.spring_b.thousandhyehyang.mission.exception.MissionErrorCode;
+import com.spring_b.thousandhyehyang.mission.exception.MissionException;
 import com.spring_b.thousandhyehyang.mission.repository.MissionRepository;
 import com.spring_b.thousandhyehyang.mission.repository.UserMissionRepository;
+import com.spring_b.thousandhyehyang.store.entity.Store;
+import com.spring_b.thousandhyehyang.store.exception.StoreErrorCode;
+import com.spring_b.thousandhyehyang.store.exception.StoreException;
+import com.spring_b.thousandhyehyang.store.repository.StoreRepository;
+import com.spring_b.thousandhyehyang.user.entity.OwnerProfile;
+import com.spring_b.thousandhyehyang.user.entity.User;
+import com.spring_b.thousandhyehyang.user.exception.UserErrorCode;
+import com.spring_b.thousandhyehyang.user.exception.UserException;
+import com.spring_b.thousandhyehyang.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -21,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Slf4j
@@ -31,6 +46,8 @@ public class MissionServiceImpl implements MissionService {
 
     private final MissionRepository missionRepository;
     private final UserMissionRepository userMissionRepository;
+    private final StoreRepository storeRepository;
+    private final UserRepository userRepository;
 
     @Override
     public MissionPageResponse getAvailableMissionsByRegion(MissionSearchRequest request) {
@@ -114,6 +131,67 @@ public class MissionServiceImpl implements MissionService {
                 .isFirst(userMissionPage.isFirst())
                 .isLast(userMissionPage.isLast())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public MissionResponse createMission(Long storeId, Long ownerId, MissionCreateRequest request) {
+        // Store 조회
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new StoreException(StoreErrorCode.STORE_NOT_FOUND));
+
+        // 권한 검증: 요청한 사용자가 해당 가게의 주인인지 확인
+        OwnerProfile storeOwner = store.getOwner();
+        if (storeOwner == null || !storeOwner.getUser().getUserId().equals(ownerId)) {
+            throw new StoreException(StoreErrorCode.OWNER_NOT_FOUND);
+        }
+
+        // Mission 엔티티 생성
+        Mission mission = Mission.builder()
+                .store(store)
+                .title(request.getTitle().trim())
+                .description(request.getDescription().trim())
+                .rewardPoint(request.getRewardPoint())
+                .build();
+
+        // Mission 저장
+        Mission savedMission = missionRepository.save(mission);
+
+        log.info("미션 생성 완료 - missionId: {}, title: {}", savedMission.getMissionId(), savedMission.getTitle());
+
+        return MissionConverter.toMissionResponse(savedMission);
+    }
+
+    @Override
+    @Transactional
+    public UserMissionResponse challengeMission(Long missionId, UserMissionChallengeRequest request) {
+        // Mission 조회
+        Mission mission = missionRepository.findById(missionId)
+                .orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND));
+
+        // User 조회
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+
+        // 이미 도전 중인 미션인지 확인
+        UserMissionId userMissionId = new UserMissionId(request.getUserId(), missionId);
+        Optional<UserMission> existingUserMission = userMissionRepository.findById(userMissionId);
+        if (existingUserMission.isPresent() && existingUserMission.get().getDeletedAt() == null) {
+            throw new MissionException(MissionErrorCode.USER_MISSION_ALREADY_EXISTS);
+        }
+
+        // UserMission 엔티티 생성
+        UserMission userMission = UserMission.builder()
+                .id(userMissionId)
+                .user(user)
+                .mission(mission)
+                .status(MissionStatus.IN_PROGRESS)
+                .build();
+
+        // UserMission 저장
+        UserMission savedUserMission = userMissionRepository.save(userMission);
+
+        return MissionConverter.toUserMissionResponse(savedUserMission);
     }
 
     private Pageable createPageable(MissionSearchRequest request) {

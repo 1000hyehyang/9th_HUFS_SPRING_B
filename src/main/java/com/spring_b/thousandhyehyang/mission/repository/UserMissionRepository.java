@@ -68,5 +68,16 @@ public interface UserMissionRepository extends JpaRepository<UserMission, UserMi
             @Param("userId") Long userId,
             @Param("status") MissionStatus status,
             Pageable pageable);
+
+    /**
+     * 사용자가 특정 가게의 미션을 도전했는지 확인
+     */
+    @Query("SELECT COUNT(um) > 0 FROM UserMission um " +
+           "INNER JOIN um.mission m " +
+           "WHERE um.user.userId = :userId " +
+           "AND m.store.storeId = :storeId " +
+           "AND um.deletedAt IS NULL " +
+           "AND m.deletedAt IS NULL")
+    boolean existsByUserIdAndStoreId(@Param("userId") Long userId, @Param("storeId") Long storeId);
 }
 
