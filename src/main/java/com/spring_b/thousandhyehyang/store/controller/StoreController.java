@@ -5,6 +5,9 @@ import com.spring_b.thousandhyehyang.global.apiPayload.code.GeneralSuccessCode;
 import com.spring_b.thousandhyehyang.store.dto.StoreResponse;
 import com.spring_b.thousandhyehyang.store.dto.StoreSearchRequest;
 import com.spring_b.thousandhyehyang.store.service.StoreService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,29 +22,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/stores")
 @RequiredArgsConstructor
+@Tag(name = "Store", description = "가게 관련 API")
 public class StoreController {
 
     private final StoreService storeService;
 
-    /**
-     * 가게 검색 API (QueryDSL 사용)
-     *
-     * 필터링 조건:
-     * - regions: 지역 필터 (시/군/구) - 다중 선택 가능
-     * - searchKeyword: 가게명 검색어
-     *   * 공백 포함: 각 단어가 포함된 가게의 합집합 조회
-     *   * 공백 없음: 검색어 전체가 포함된 가게만 조회
-     *
-     * 정렬 조건:
-     * - sortBy: "latest" (최신순) 또는 "name" (이름순)
-     *
-     * 페이징:
-     * - page: 페이지 번호 (기본값: 0)
-     * - size: 페이지 크기 (기본값: 10)
-     *
-     * @param request 검색 요청 DTO
-     * @return Page<StoreResponse>
-     */
+    @Operation(summary = "가게 검색", description = "지역, 가게명으로 가게를 검색합니다.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "검색 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (Validation 실패)")
+    })
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<Page<StoreResponse>>> searchStores(
             @Valid @ModelAttribute StoreSearchRequest request) {
