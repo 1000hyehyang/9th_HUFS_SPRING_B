@@ -2,6 +2,7 @@ package com.spring_b.thousandhyehyang.review.dto;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ReviewSearchRequest {
 
+    @Size(max = 100, message = "가게명은 100자 이하여야 합니다")
     private String storeName;
 
     @Min(value = 0, message = "별점 범위는 0 이상이어야 합니다")

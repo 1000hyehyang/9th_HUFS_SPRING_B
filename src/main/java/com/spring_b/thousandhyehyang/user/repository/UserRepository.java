@@ -18,4 +18,20 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "WHERE u.userId = :userId " +
            "AND u.deletedAt IS NULL")
     Optional<User> findUserForMyPage(@Param("userId") Long userId);
+
+    /**
+     * 회원가입: 이메일 중복 체크
+     */
+    @Query("SELECT COUNT(u) > 0 FROM User u " +
+           "WHERE LOWER(u.email) = LOWER(:email) " +
+           "AND u.deletedAt IS NULL")
+    boolean existsByEmail(@Param("email") String email);
+
+    /**
+     * 회원가입: 닉네임 중복 체크
+     */
+    @Query("SELECT COUNT(u) > 0 FROM User u " +
+           "WHERE u.nickname = :nickname " +
+           "AND u.deletedAt IS NULL")
+    boolean existsByNickname(@Param("nickname") String nickname);
 }
