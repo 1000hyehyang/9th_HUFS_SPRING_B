@@ -76,10 +76,10 @@ public class ReviewController {
                 .body(ApiResponse.onSuccess(GeneralSuccessCode.OK, response));
     }
 
-    @Operation(summary = "내가 작성한 리뷰 조회", description = "특정 사용자가 작성한 리뷰를 조회합니다.")
+    @Operation(summary = "내가 작성한 리뷰 목록 조회", description = "특정 사용자가 작성한 리뷰 목록을 페이징하여 조회합니다. (한 페이지에 10개씩, 페이지 번호는 1 이상)")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (Validation 실패)")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 (Validation 실패, 페이지 번호는 1 이상이어야 함)")
     })
     @GetMapping("/my/{userId}")
     public ResponseEntity<ApiResponse<Page<ReviewResponse>>> getMyReviews(

@@ -49,4 +49,25 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
             @Param("sigungu") String sigungu,
             @Param("userId") Long userId,
             Pageable pageable);
+
+    /**
+     * 특정 가게의 미션 목록 조회 (페이징 포함)
+     */
+    @Query(value = """
+        SELECT m FROM Mission m
+        INNER JOIN FETCH m.store s
+        WHERE m.store.storeId = :storeId
+        AND m.deletedAt IS NULL
+        AND s.deletedAt IS NULL
+        ORDER BY m.createdAt DESC
+        """,
+        countQuery = """
+        SELECT COUNT(m) FROM Mission m
+        WHERE m.store.storeId = :storeId
+        AND m.deletedAt IS NULL
+        AND m.store.deletedAt IS NULL
+        """)
+    Page<Mission> findByStoreId(
+            @Param("storeId") Long storeId,
+            Pageable pageable);
 }

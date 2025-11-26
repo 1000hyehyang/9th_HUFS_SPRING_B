@@ -26,6 +26,7 @@ public class ReviewResponse {
     private Instant updatedAt;
     private List<String> imageUrls;
     private List<Reply> replies;
+    private Reply ownerReply;
 
     @Data
     @NoArgsConstructor
