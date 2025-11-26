@@ -34,6 +34,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -81,10 +82,37 @@ public class MissionServiceImpl implements MissionService {
     }
 
     @Override
+    public MissionPageResponse getMissionsByStoreId(Long storeId, Integer page, Integer size) {
+        log.info("특정 가게의 미션 목록 조회 요청 - storeId: {}, page: {}, size: {}", storeId, page, size);
+
+        // 프론트엔드는 1-based page를 전달하므로 0-based로 변환
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<Mission> missionPage = missionRepository.findByStoreId(storeId, pageable);
+
+        List<MissionResponse> missionResponses = missionPage.getContent().stream()
+                .map(MissionConverter::toMissionResponse)
+                .toList();
+
+        return MissionPageResponse.builder()
+                .content(missionResponses)
+                .page(missionPage.getNumber() + 1) // 1-based로 변환하여 반환
+                .size(missionPage.getSize())
+                .totalElements(missionPage.getTotalElements())
+                .totalPages(missionPage.getTotalPages())
+                .hasNext(missionPage.hasNext())
+                .hasPrevious(missionPage.hasPrevious())
+                .isFirst(missionPage.isFirst())
+                .isLast(missionPage.isLast())
+                .build();
+    }
+
+    @Override
     public UserMissionPageResponse getMyMissions(Long userId, Integer page, Integer size) {
         log.info("내 미션 조회 요청 - userId: {}, page: {}, size: {}", userId, page, size);
 
-        Pageable pageable = PageRequest.of(page, size);
+        // 프론트엔드는 1-based page를 전달하므로 0-based로 변환
+        Pageable pageable = PageRequest.of(page - 1, size);
 
         Set<MissionStatus> statuses = Set.of(MissionStatus.IN_PROGRESS, MissionStatus.COMPLETED);
         Page<UserMission> userMissionPage = userMissionRepository.findByUserIdAndStatusIn(
@@ -96,7 +124,35 @@ public class MissionServiceImpl implements MissionService {
 
         return UserMissionPageResponse.builder()
                 .content(responses)
-                .page(userMissionPage.getNumber())
+                .page(userMissionPage.getNumber() + 1) // 1-based로 변환하여 반환
+                .size(userMissionPage.getSize())
+                .totalElements(userMissionPage.getTotalElements())
+                .totalPages(userMissionPage.getTotalPages())
+                .hasNext(userMissionPage.hasNext())
+                .hasPrevious(userMissionPage.hasPrevious())
+                .isFirst(userMissionPage.isFirst())
+                .isLast(userMissionPage.isLast())
+                .build();
+    }
+
+    @Override
+    public UserMissionPageResponse getInProgressMissions(Long userId, Integer page, Integer size) {
+        log.info("내가 진행중인 미션 조회 요청 - userId: {}, page: {}, size: {}", userId, page, size);
+
+        // 프론트엔드는 1-based page를 전달하므로 0-based로 변환
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Set<MissionStatus> statuses = Set.of(MissionStatus.IN_PROGRESS);
+        Page<UserMission> userMissionPage = userMissionRepository.findByUserIdAndStatusIn(
+                userId, statuses, pageable);
+
+        List<UserMissionResponse> responses = userMissionPage.getContent().stream()
+                .map(MissionConverter::toUserMissionResponse)
+                .toList();
+
+        return UserMissionPageResponse.builder()
+                .content(responses)
+                .page(userMissionPage.getNumber() + 1) // 1-based로 변환하여 반환
                 .size(userMissionPage.getSize())
                 .totalElements(userMissionPage.getTotalElements())
                 .totalPages(userMissionPage.getTotalPages())
@@ -111,7 +167,8 @@ public class MissionServiceImpl implements MissionService {
     public UserMissionPageResponse getCompletedMissions(Long userId, Integer page, Integer size) {
         log.info("완료한 미션 조회 요청 - userId: {}, page: {}, size: {}", userId, page, size);
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "completedAt"));
+        // 프론트엔드는 1-based page를 전달하므로 0-based로 변환
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "completedAt"));
 
         Page<UserMission> userMissionPage = userMissionRepository.findByUserIdAndStatusOrderByCompletedAtDesc(
                 userId, MissionStatus.COMPLETED, pageable);
@@ -122,7 +179,7 @@ public class MissionServiceImpl implements MissionService {
 
         return UserMissionPageResponse.builder()
                 .content(responses)
-                .page(userMissionPage.getNumber())
+                .page(userMissionPage.getNumber() + 1) // 1-based로 변환하여 반환
                 .size(userMissionPage.getSize())
                 .totalElements(userMissionPage.getTotalElements())
                 .totalPages(userMissionPage.getTotalPages())
@@ -192,6 +249,35 @@ public class MissionServiceImpl implements MissionService {
         UserMission savedUserMission = userMissionRepository.save(userMission);
 
         return MissionConverter.toUserMissionResponse(savedUserMission);
+    }
+
+    @Override
+    @Transactional
+    public UserMissionResponse completeMission(Long userId, Long missionId) {
+        log.info("미션 완료 요청 - userId: {}, missionId: {}", userId, missionId);
+
+        // UserMission 조회
+        UserMissionId userMissionId = new UserMissionId(userId, missionId);
+        UserMission userMission = userMissionRepository.findById(userMissionId)
+                .orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND));
+
+        // 삭제된 미션인지 확인
+        if (userMission.getDeletedAt() != null) {
+            throw new MissionException(MissionErrorCode.MISSION_NOT_FOUND);
+        }
+
+        // 진행중인 미션인지 확인
+        if (userMission.getStatus() != MissionStatus.IN_PROGRESS) {
+            throw new MissionException(MissionErrorCode.MISSION_NOT_FOUND);
+        }
+
+        // 미션 완료 처리
+        userMission.setStatus(MissionStatus.COMPLETED);
+        userMission.setCompletedAt(Instant.now());
+
+        log.info("미션 완료 처리 완료 - userId: {}, missionId: {}", userId, missionId);
+
+        return MissionConverter.toUserMissionResponse(userMission);
     }
 
     private Pageable createPageable(MissionSearchRequest request) {

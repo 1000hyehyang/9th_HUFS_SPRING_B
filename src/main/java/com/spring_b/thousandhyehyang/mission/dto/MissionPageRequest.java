@@ -1,9 +1,8 @@
-package com.spring_b.thousandhyehyang.review.dto;
+package com.spring_b.thousandhyehyang.mission.dto;
 
 import com.spring_b.thousandhyehyang.global.validation.ValidPage;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,14 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ReviewSearchRequest {
-
-    @Size(max = 100, message = "가게명은 100자 이하여야 합니다")
-    private String storeName;
-
-    @Min(value = 0, message = "별점 범위는 0 이상이어야 합니다")
-    @Max(value = 5, message = "별점 범위는 5 이하여야 합니다")
-    private Integer ratingRange;
+public class MissionPageRequest {
 
     @ValidPage(message = "페이지 번호는 1 이상이어야 합니다")
     @Builder.Default
@@ -30,10 +22,5 @@ public class ReviewSearchRequest {
     @Max(value = 100, message = "페이지 크기는 100 이하여야 합니다")
     @Builder.Default
     private Integer size = 10;
-
-    // 정렬 기준 (createdAt, rating, updatedAt)
-    private String sortBy;
-
-    // 정렬 방향 (ASC, DESC)
-    private String sortDirection;
 }
+

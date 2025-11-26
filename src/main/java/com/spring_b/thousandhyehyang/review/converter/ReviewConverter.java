@@ -1,10 +1,12 @@
 package com.spring_b.thousandhyehyang.review.converter;
 
+import com.spring_b.thousandhyehyang.global.enums.UserRole;
 import com.spring_b.thousandhyehyang.review.dto.ReviewResponse;
 import com.spring_b.thousandhyehyang.review.dto.ReviewResponse.Reply;
 import com.spring_b.thousandhyehyang.review.entity.Review;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public final class ReviewConverter {
@@ -36,6 +38,21 @@ public final class ReviewConverter {
                 .sorted(Comparator.comparing(Reply::getCreatedAt))
                 .collect(Collectors.toList());
 
+        // 사장님 답글 찾기 (OWNER role이고 parent가 null인 원댓글)
+        Optional<Reply> ownerReply = review.getReviewReplies().stream()
+                .filter(reply -> reply.getDeletedAt() == null)
+                .filter(reply -> reply.getUser().getRole() == UserRole.OWNER)
+                .filter(reply -> reply.getParent() == null)
+                .findFirst()
+                .map(reply -> Reply.builder()
+                        .replyId(reply.getReplyId())
+                        .content(reply.getContent())
+                        .writerNickname(reply.getUser().getNickname())
+                        .writerRole(reply.getUser().getRole())
+                        .createdAt(reply.getCreatedAt())
+                        .parentReplyId(null) // 원댓글이므로 null
+                        .build());
+
         return ReviewResponse.builder()
                 .reviewId(review.getReviewId())
                 .userId(review.getUser().getUserId())
@@ -48,6 +65,7 @@ public final class ReviewConverter {
                 .updatedAt(review.getUpdatedAt())
                 .imageUrls(imageUrls)
                 .replies(replies)
+                .ownerReply(ownerReply.orElse(null))
                 .build();
     }
 }

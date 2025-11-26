@@ -34,7 +34,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -80,14 +79,12 @@ public class ReviewServiceImpl implements ReviewService {
                 .build();
 
         if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-            List<ReviewImage> reviewImages = new ArrayList<>();
-            for (String imageUrl : request.getImageUrls()) {
-                ReviewImage reviewImage = ReviewImage.builder()
-                        .review(review)
-                        .url(imageUrl)
-                        .build();
-                reviewImages.add(reviewImage);
-            }
+            List<ReviewImage> reviewImages = request.getImageUrls().stream()
+                    .map(imageUrl -> ReviewImage.builder()
+                            .review(review)
+                            .url(imageUrl)
+                            .build())
+                    .collect(Collectors.toList());
             review.setReviewImages(reviewImages);
         }
 
@@ -175,7 +172,8 @@ public class ReviewServiceImpl implements ReviewService {
         log.info("내가 작성한 리뷰 조회 요청 - userId: {}, request: {}", userId, request);
 
         Sort sort = createSort(request.getSortBy(), request.getSortDirection());
-        Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), sort);
+        // 프론트엔드는 1-based page를 전달하므로 0-based로 변환
+        Pageable pageable = PageRequest.of(request.getPage() - 1, request.getSize(), sort);
 
         Page<Review> reviewPage = reviewRepository.findMyReviews(
                 userId,
